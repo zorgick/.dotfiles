@@ -17,8 +17,8 @@ set secure                                                                      
 packadd! matchit
                                                                                 " key bindings - How to map Alt key? - Vi and Vim Stack Exchange - https://vi.stackexchange.com/questions/2350/how-to-map-alt-key
 if &term =~ 'xterm' && !has("gui_running")
-                                                                                " tell vim what escape sequence to expect for various keychords
-                                                                                " this is needed for terminal Vim to regognize Meta and Shift modifiers
+                                                                                " tell vim what escape sequence to expect for various key chords
+                                                                                " this is needed for terminal Vim to recognize Meta and Shift modifiers
   execute "set <A-w>=\ew"
   execute "set <S-F2>=\e[1;2Q"
   execute "set <A-k>=\ek"
@@ -55,8 +55,6 @@ if !filereadable(plugpath)
   endif
 endif
 call plug#begin('~/.config/nvim/bundle')
-                                                                                " Terminal
-Plug 'kassio/neoterm'
                                                                                 " GIT
 Plug 'tpope/vim-fugitive'
 Plug 'junegunn/gv.vim'
@@ -75,8 +73,6 @@ Plug 'dyng/ctrlsf.vim'
 Plug 'sonph/onehalf', {'rtp': 'vim/'}
 Plug 'morhetz/gruvbox'
 Plug 'ap/vim-css-color'
-                                                                                " Lint
-Plug 'rhysd/vim-clang-format'
                                                                                 " Languages
 Plug 'prabirshrestha/async.vim'
 Plug 'prabirshrestha/vim-lsp'
@@ -85,8 +81,6 @@ Plug 'yuezk/vim-js'
 Plug 'HerringtonDarkholme/yats.vim'
 Plug 'maxmellon/vim-jsx-pretty'
 Plug 'rhysd/vim-gfm-syntax'
-" Plug 'jxnblk/vim-mdx-js'
-" Plug 'justmao945/vim-clang'
                                                                                 " Airline
 Plug 'vim-airline/vim-airline'
 Plug 'vim-airline/vim-airline-themes'
@@ -156,15 +150,6 @@ let g:airline#extensions#tabline#show_tab_nr = 0
 let g:mergetool_layout = 'mr'
 let g:mergetool_prefer_revision = 'local'
                                                                                 " }}}
-                                                                                " @clang-formatter@ {{{
-let g:clang_format#style_options = {
-      \ "AccessModifierOffset" : -4,
-      \ "AllowShortIfStatementsOnASingleLine" : "false",
-      \ "AlwaysBreakTemplateDeclarations" : "true",
-      \ "Standard" : "C++11",
-      \ "BreakBeforeBraces" : "Stroustrup"
-      \}
-                                                                                " }}}
                                                                                 " @ctrlsf@ {{{
 let g:ctrlsf_auto_focus = { "at": "start" }
 let g:ctrlsf_ignore_dir = g:search_ignore_dirs
@@ -202,8 +187,10 @@ let g:lsp_signs_error = {'text': '!'}                                           
 let g:lsp_signs_warning = {'text': '?'}                                         " change warning sign 
 let g:lsp_signs_information = {'text': 'i'}                                     " change info sign
 let g:lsp_highlight_references_enabled = 1                                      " highlight references to the symbol under the cursor
+                                                                                 " }}}
+                                                                                " @vsnip@ {{{
+let g:vsnip_snippet_dir = '~/.config/nvim/snippets/'                            " directory to store snippets 
                                                                                 " }}}
-let g:vsnip_snippet_dir = ~/.config/nvim/snippets//                             " directory to store snippets 
 
 
 " {{ Programms }}
@@ -575,10 +562,6 @@ command! -nargs=? -bang -complete=dir FzfFiles
 autocmd FileType javascript.jsx setlocal commentstring={/*\ %s\ */}
 autocmd FileType c,cpp,cs,java setlocal commentstring=//\ %s
                                                                                 " }}}
-                                                                                " @clang-formatter@ {{{
-                                                                                " use google formatting
-autocmd FileType c,cpp,cs ClangFormatAutoEnable
-                                                                                " }}}
                                                                                 " @plantuml@ {{{
 au FileType plantuml let g:plantuml_previewer#plantuml_jar_path = get(
       \  matchlist(system('cat `which plantuml` | grep plantuml.jar'), '\v.*\s[''"]?(\S+plantuml\.jar).*'),
@@ -586,7 +569,9 @@ au FileType plantuml let g:plantuml_previewer#plantuml_jar_path = get(
       \  0
       \)
                                                                                 " }}}
-
+                                                                                " @lsp@ {{{
+autocmd BufWritePost *.c,*.cpp :LspDocumentFormat
+                                                                                " }}}
 
 " {{ Maps-Remaps }}
                                                                                 " remap command mode invocation
@@ -657,6 +642,9 @@ nnoremap n nzvzz
 nnoremap N Nzvzz
 nnoremap * *zvzz
 nnoremap # #zvzz
+                                                                                " move up and down in autocomplete with <c-j> and <c-k>
+inoremap <expr> <C-j> ("\<C-n>")
+inoremap <expr> <C-k> ("\<C-p>")
                                                                                 " &search highlight& {{{
                                                                                 " define OnSearchCompleted hook
 noremap  <Plug>OnSearchCompleted <Nop>
@@ -738,16 +726,11 @@ imap <c-x><c-f> <plug>(fzf-complete-path)
 imap <c-x><c-l> <plug>(fzf-complete-buffer-line)
                                                                                 " }}}
 
-
 " {{ Map leader commands }}
                                                                                 " map leader to space
 nnoremap <Space> <Nop>
 let mapleader=" "
 let maplocalleader=","
-                                                                                " trim all whitespaces at the end of the line
-nnoremap <leader>T :%s/\s\+$//<cr>:let @/=''<CR>
-                                                                                " reselect the text that was just pasted
-nnoremap <leader>v V`]
                                                                                 " quickly edit/reload the vimrc file
 nmap <silent> <leader>ev :e $MYVIMRC<CR>
 nmap <silent> <leader>sv :so $MYVIMRC<CR>
@@ -785,11 +768,6 @@ nnoremap <leader>h <C-w>s<C-w>j
                                                                                 " Toggle search highlighting
 nnoremap <silent> <leader>n :set hlsearch!<cr>
                                                                                 "
-                                                                                " !search! ====
-                                                                                " move up and down in autocomplete with <c-j> and <c-k>
-inoremap <expr> <C-j> ("\<C-n>")
-inoremap <expr> <C-k> ("\<C-p>")
-                                                                                "
                                                                                 " @FzF@ {{{
                                                                                 " toggle FZF in current directory
 nnoremap <silent> <leader>o :FZF<CR>
@@ -805,10 +783,6 @@ nmap <leader>mt <plug>(MergetoolToggle)
                                                                                 " comment line and move 1 line down
 nmap <silent> <leader>c <Plug>CommentaryLine :normal j<CR>
 xmap <leader>c <Plug>Commentary
-                                                                                " }}}
-                                                                                " @clang-formatter@ {{{
-autocmd FileType c,cpp,objc nnoremap <buffer><Leader>f :<C-u>ClangFormat<CR>
-autocmd FileType c,cpp,objc vnoremap <buffer><Leader>f :ClangFormat<CR>
                                                                                 " }}}
                                                                                 " @neoterm@ {{{
                                                                                 " clear neoterm
@@ -902,7 +876,10 @@ set laststatus=2                                                                
 set cmdheight=2                                                                 " give more space for displaying messages
 set signcolumn=yes                                                              " always show sign column to prevent text shiftingG80
 set display=lastline                                                            " add @@@ marks on the last column of last line if there is more text below
-
+hi! link Search IncSearch                                                       " highlight both search and incremental search identically
+                                                                                " @lsp@ {{{
+highlight link LspHintText Statement                                            " change lsp hint highlight
+                                                                                " }}}
 
 " {{ Formatting }}
 set nowrap                                                                      " don't wrap lines
@@ -931,8 +908,6 @@ augroup END
 
 " {{ Search }}
 set nohlsearch                                                                  " disable search highlighting
-                                                                                " highlight both search and incremental search identically
-hi! link Search IncSearch
 set ignorecase                                                                  " ignore case when searching
 set wrapscan                                                                    " start over when reaching last match
 set incsearch                                                                   " incremental search that shows partial matches
