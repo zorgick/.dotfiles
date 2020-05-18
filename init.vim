@@ -5,19 +5,21 @@
 " there are 2 types of the utilities with a designated set of symbols
 " - self-written utilities - '& & {{{  }}}'
 " - plugin utilities - '@ @ {{{  }}}'
+" remap <CTRl> to <Caps-Lock> via system or external programs for
+" comfortable hotkeys combination
+" on Mac: preferences > keyboard > modifier keys
+" on Windows: 
+" use :checkhealth to monitor any problems with neovim
 " {{ General }}
 set nocompatible                                                                " use vim settings rather than vi settings
 filetype plugin indent on                                                       " turn on detection, plugin and indent at once
 set confirm                                                                     " ask before unsafe actions
-set shell=/bin/bash                                                             " use /bin/bash as a shell
-set ttyfast                                                                     " indicate we have a fast terminal connection. Improves smooth redrawing
 set exrc                                                                        " search for .vimrc in current directory
 set secure                                                                      " prevent unsafe operations from project .vimrc
                                                                                 " load the version of matchit.vim that ships with Vim
 packadd! matchit
-                                                                                " key bindings - How to map Alt key? - Vi and Vim Stack Exchange - https://vi.stackexchange.com/questions/2350/how-to-map-alt-key
-if &term =~ 'xterm' && !has("gui_running")
-                                                                                " tell vim what escape sequence to expect for various key chords
+                                                                                " key bindings - How to map Alt key?
+if &term =~ 'xterm' && !has("gui_running") && !has("nvim")
                                                                                 " this is needed for terminal Vim to recognize Meta and Shift modifiers
   execute "set <A-w>=\ew"
   execute "set <S-F2>=\e[1;2Q"
@@ -28,14 +30,10 @@ endif
 
 
 " {{ Timeout settings }}
-                                                                                " Eliminating ESC delays in vim - Metaserv - https://meta-serv.com/article/vim_delay
-                                                                                " Delayed esc from insert mode caused by cursor-shape terminal sequence - Vi and Vim Stack Exchange - https://vi.stackexchange.com/questions/15633/delayed-esc-from-insert-mode-caused-by-cursor-shape-terminal-sequence
-                                                                                " Wait forever until I recall mapping
-                                                                                " Don't wait to much for keycodes send by terminal, so there's no delay on <ESC>
-set notimeout
-set ttimeout
-set timeoutlen=2000
-set ttimeoutlen=30
+set notimeout                                                                   " eliminating ESC delays in vim
+set ttimeout                                                                    " delayed esc from insert mode caused by cursor-shape terminal sequence
+set timeoutlen=2000                                                             " wait forever until I recall mapping
+set ttimeoutlen=30                                                              " don't wait to much for keycodes send by terminal, so there's no delay on <ESC>
 
 
 " {{ Plugs }}
@@ -58,6 +56,7 @@ call plug#begin('~/.config/nvim/bundle')
                                                                                 " GIT
 Plug 'tpope/vim-fugitive'
 Plug 'junegunn/gv.vim'
+Plug 'airblade/vim-gitgutter'
 Plug 'samoshkin/vim-mergetool'
                                                                                 " Formatting
 Plug 'jiangmiao/auto-pairs'
@@ -77,6 +76,7 @@ Plug 'ap/vim-css-color'
 Plug 'prabirshrestha/async.vim'
 Plug 'prabirshrestha/vim-lsp'
 Plug 'mattn/vim-lsp-settings'
+Plug 'octol/vim-cpp-enhanced-highlight'
 Plug 'yuezk/vim-js'
 Plug 'HerringtonDarkholme/yats.vim'
 Plug 'maxmellon/vim-jsx-pretty'
@@ -87,19 +87,29 @@ Plug 'vim-airline/vim-airline-themes'
                                                                                 " Intellisense
 Plug 'prabirshrestha/asyncomplete.vim'
 Plug 'prabirshrestha/asyncomplete-lsp.vim'
-Plug 'hrsh7th/vim-vsnip'
-Plug 'hrsh7th/vim-vsnip-integ'
+Plug 'SirVer/ultisnips'
+Plug 'honza/vim-snippets'
+" Plug 'hrsh7th/vim-vsnip'
+" Plug 'hrsh7th/vim-vsnip-integ'
                                                                                 " pluntuml
 Plug 'aklt/plantuml-syntax'
 Plug 'tyru/open-browser.vim'
 Plug 'weirongxu/plantuml-previewer.vim'
                                                                                 " debug
 Plug 'critiqjo/lldb.nvim'
+                                                                                " testing
+Plug 'janko/vim-test'
+                                                                                " latex
+Plug 'lervag/vimtex'
+                                                                                " terminal
+Plug 'caenrique/nvim-toggle-terminal'
 call plug#end()
 
 
 " {{ Variables }}
                                                                                 " &custom variables& {{{
+let g:python_host_prog = '/usr/bin/python'                                      " command to start Python 2
+let g:python3_host_prog = '/usr/local/opt/python@3.8/bin/python3'               " command to start Python 3
 let _resize_factor = 1.2                                                        " resize step
                                                                                 " ignore directories
 let g:search_ignore_dirs = [
@@ -108,6 +118,9 @@ let g:search_ignore_dirs = [
   \ 'coverage',
   \ 'package-lock.json'
   \] 
+if has('nvim')
+  let $GIT_EDITOR = 'nvr -cc split --remote-wait'                               " prevent nested nvim inside :terminal when using git
+endif
                                                                                 " }}}
                                                                                 " &Quickfix and Location list& {{{
                                                                                 " automatically quit if qf/loc is the last window opened
@@ -187,9 +200,30 @@ let g:lsp_signs_error = {'text': '!'}                                           
 let g:lsp_signs_warning = {'text': '?'}                                         " change warning sign 
 let g:lsp_signs_information = {'text': 'i'}                                     " change info sign
 let g:lsp_highlight_references_enabled = 1                                      " highlight references to the symbol under the cursor
-                                                                                 " }}}
+let g:lsp_virtual_text_prefix = " ∆ "                                           " prefix virtual text with a symbol
+                                                                                " }}}
                                                                                 " @vsnip@ {{{
 let g:vsnip_snippet_dir = '~/.config/nvim/snippets/'                            " directory to store snippets 
+                                                                                " }}}
+                                                                                " @test@ {{{
+                                                                                "  make test commands execute using :terminal in a split window
+let test#strategy = 'neovim'
+let test#neovim#term_position = "vert 80"
+                                                                                " }}}
+                                                                                " @gitgutter@ {{{
+let g:gitgutter_git_executable = '/usr/local/bin/git'
+let g:gitgutter_grep = 'rg'
+let g:gitgutter_enabled = 0
+                                                                                " }}}
+                                                                                " @vimtex@ {{{
+let g:vimtex_compiler_progname = 'nvr'
+let g:tex_flavor = 'latex'
+let g:vimtex_view_method = 'skim'
+let g:vimtex_quickfix_mode = 0
+                                                                                " }}}
+                                                                                " @ultisnips@ {{{
+let g:UltiSnipsJumpForwardTrigger="<c-n>"
+let g:UltiSnipsJumpBackwardTrigger="<c-b>"
                                                                                 " }}}
 
 
@@ -213,6 +247,15 @@ function s:get_var(...)
     return exists('a:2') ? a:2 : ''
   endif
 endfunction
+"
+augroup term_setup
+  au!
+                                                                                " remove line numbers in terminal mode
+  autocmd TermOpen * setlocal nonumber norelativenumber mouse=a
+                                                                                " enter Terminal-mode (insert) automatically
+  autocmd TermOpen * startinsert
+augroup END
+autocmd FileType gitcommit,gitrebase,gitconfig set bufhidden=delete             " use :wq to save and kill buffer for git
                                                                                 " &move lines up/down& {{{
 function! s:MoveBlockDown() range
   execute a:firstline "," a:lastline "move '>+1"
@@ -476,6 +519,33 @@ function s:findprg_compose_ignoredir_args(backend, ignore_dirs)
 endfunction
                                                                                 " }}}
                                                                                 " &Quickfix and Location list& {{{
+function! GetBufferList()
+  redir =>buflist
+  silent! ls!
+  redir END
+  return buflist
+endfunction
+"
+function! ToggleList(bufname, pfx)
+  let buflist = GetBufferList()
+  for bufnum in map(filter(split(buflist, '\n'), 'v:val =~ "'.a:bufname.'"'), 'str2nr(matchstr(v:val, "\\d\\+"))')
+    if bufwinnr(bufnum) != -1
+      exec(a:pfx.'close')
+      return
+    endif
+  endfor
+  if a:pfx == 'l' && len(getloclist(0)) == 0
+      echohl ErrorMsg
+      echo "Location List is Empty."
+      return
+  endif
+  let winnr = winnr()
+  exec(a:pfx.'open')
+  if winnr() != winnr
+    wincmd p
+  endif
+endfunction
+"
 augroup aug_quickfix_list
   au!
   autocmd QuickFixCmdPre [^l]* call s:qf_loc_on_enter('qf')
@@ -570,8 +640,58 @@ au FileType plantuml let g:plantuml_previewer#plantuml_jar_path = get(
       \)
                                                                                 " }}}
                                                                                 " @lsp@ {{{
-autocmd BufWritePost *.c,*.cpp :LspDocumentFormat
+autocmd BufWritePost * LspDocumentFormat
+"
+function! s:on_lsp_buffer_enabled() abort
+    setlocal omnifunc=lsp#complete
+    nmap <buffer> gd <plug>(lsp-peek-definition)
+    nmap <buffer> gi <plug>(lsp-implementation)
+    nmap <buffer> gt <plug>(lsp-peek-type-definition)
+    nmap <buffer> gr <plug>(lsp-references)
+    nmap <buffer> <F2> <plug>(lsp-rename)
+endfunction
+"
+augroup lsp_install
+    au!
+                                                                                " call s:on_lsp_buffer_enabled only for languages that has the server registered.
+    autocmd User lsp_buffer_enabled call s:on_lsp_buffer_enabled()
+augroup END
                                                                                 " }}}
+                                                                                " @mergetool@ {{{
+                                                                                " diff or merge indicator
+function! AirlineDiffmergePart()
+  if get(g:, 'mergetool_in_merge_mode', 0)
+    return '?' . s:spc . s:spc
+  endif
+  if &diff
+    return '?' . s:spc . s:spc
+  endif
+  return ''
+endfunction
+"
+function s:on_mergetool_set_layout(split)
+                                                                                " disable syntax and spell checking highlighting in merge mode
+  setlocal syntax=off
+  setlocal nospell
+                                                                                " when base is horizontal split at the bottom
+                                                                                " turn off diff mode, and show syntax highlighting
+                                                                                " also let it take less height
+  if a:split["layout"] ==# 'mr,b' && a:split["split"] ==# 'b'
+    setlocal nodiff
+    setlocal syntax=on
+    resize 15
+  endif
+endfunction
+let g:MergetoolSetLayoutCallback = function('s:on_mergetool_set_layout')
+                                                                                " }}}
+                                                                                " @gitgutter@ {{{
+                                                                                " get a list of counts of added, modified, and removed lines in the current buffer
+function! GitStatus()
+  let [a,m,r] = GitGutterGetHunkSummary()
+  return printf('+%d ~%d -%d', a, m, r)
+endfunction
+                                                                                " }}}
+au Filetype markdown,tex let b:autopairs_enabled = 0
 
 " {{ Maps-Remaps }}
                                                                                 " remap command mode invocation
@@ -593,10 +713,11 @@ inoremap <right> <nop>
                                                                                 " jj, in INSERT mode
                                                                                 " <C-c>, after shell environment
 inoremap jj <ESC>
+tnoremap jj <c-\><c-n>
 noremap <C-C> <ESC>
 xnoremap <C-C> <ESC>
-                                                                                " c++ compiling and running programs from Vim
-map <F10> :!g++ % && ./a.out <CR>
+                                                                                " c++ compiling from Vim
+map <F10> :make<CR>
                                                                                 " !lines! ====
                                                                                 " join lines and keep the cursor in place
 nnoremap J mzJ`z
@@ -692,18 +813,6 @@ nnoremap ][ ][zvzz
 nnoremap <BS> i<BS>
                                                                                 "
                                                                                 " &Quickfix and Location list& {{{
-                                                                                " <f5> for quickfix list
-nmap <F5> <Plug>(qf_qf_toggle)
-nmap <S-F5> <Plug>(qf_qf_switch)
-nnoremap <silent> <leader><F5> :call <SID>qf_loc_quit('qf')<CR>
-nnoremap <silent> [<F5> :call <SID>qf_loc_history_navigate('colder')<CR>
-nnoremap <silent> ]<F5> :call <SID>qf_loc_history_navigate('cnewer')<CR>
-                                                                                " <F6> for location list
-nmap <F6> <Plug>(qf_loc_toggle)
-nmap <S-F6> <Plug>(qf_loc_switch)
-nmap <silent> <leader><F6> :call <SID>qf_loc_quit('loc')<CR>
-nnoremap <silent> [<F6> :call <SID>qf_loc_history_navigate('lolder')<CR>
-nnoremap <silent> ]<F6> :call <SID>qf_loc_history_navigate('lnewer')<CR>
                                                                                 " Quickfix list
 nnoremap <silent> ]q :<C-u>call <SID>qf_loc_list_navigate("cnext")<CR>
 nnoremap <silent> [q :<C-u>call <SID>qf_loc_list_navigate("cprev")<CR>
@@ -712,10 +821,10 @@ nnoremap <silent> [Q :<C-u>call <SID>qf_loc_list_navigate("cfirst")<CR>
 nnoremap <silent> ]<C-q> :<C-u>call <SID>qf_loc_list_navigate("cnfile")<CR>
 nnoremap <silent> [<C-q> :<C-u>call <SID>qf_loc_list_navigate("cpfile")<CR>
                                                                                 " Location list
-nnoremap <silent> ]e :<C-u>call <SID>qf_loc_list_navigate("lnext")<CR>
-nnoremap <silent> [e :<C-u>call <SID>qf_loc_list_navigate("lprev")<CR>
-nnoremap <silent> ]E :<C-u>call <SID>qf_loc_list_navigate("llast")<CR>
-nnoremap <silent> [E :<C-u>call <SID>qf_loc_list_navigate("lfirst")<CR>
+nnoremap <silent> ]l :<C-u>call <SID>qf_loc_list_navigate("lnext")<CR>
+nnoremap <silent> [l :<C-u>call <SID>qf_loc_list_navigate("lprev")<CR>
+nnoremap <silent> ]L :<C-u>call <SID>qf_loc_list_navigate("llast")<CR>
+nnoremap <silent> [L :<C-u>call <SID>qf_loc_list_navigate("lfirst")<CR>
 nnoremap <silent> ]<C-e> :<C-u>call <SID>qf_loc_list_navigate("lnfile")<CR>
 nnoremap <silent> [<C-e> :<C-u>call <SID>qf_loc_list_navigate("lpfile")<CR>
                                                                                 " }}}
@@ -725,6 +834,24 @@ imap <c-x><c-k> <plug>(fzf-complete-word)
 imap <c-x><c-f> <plug>(fzf-complete-path)
 imap <c-x><c-l> <plug>(fzf-complete-buffer-line)
                                                                                 " }}}
+                                                                                " @test@ {{{
+nmap <silent> t<C-n> :TestNearest<CR>
+nmap <silent> t<C-f> :TestFile<CR>
+nmap <silent> t<C-s> :TestSuite<CR>
+nmap <silent> t<C-l> :TestLast<CR>
+nmap <silent> t<C-g> :TestVisit<CR>
+                                                                                " }}}
+                                                                                " @mergetool@ {{{
+                                                                                " diff exchange and movement actions
+nmap <expr> <C-Left> &diff? '<Plug>(MergetoolDiffExchangeLeft)' : '<C-Left>'
+nmap <expr> <C-Right> &diff? '<Plug>(MergetoolDiffExchangeRight)' : '<C-Right>'
+nmap <expr> <C-Down> &diff? '<Plug>(MergetoolDiffExchangeDown)' : '<C-Down>'
+nmap <expr> <C-Up> &diff? '<Plug>(MergetoolDiffExchangeUp)' : '<C-Up>'
+                                                                                " move through diffs. [c and ]c are native Vim mappings
+nnoremap <expr> <Up> &diff ? '[czz' : ''
+nnoremap <expr> <Down> &diff ? ']czz' : ''
+                                                                                " }}}
+
 
 " {{ Map leader commands }}
                                                                                 " map leader to space
@@ -733,7 +860,20 @@ let mapleader=" "
 let maplocalleader=","
                                                                                 " quickly edit/reload the vimrc file
 nmap <silent> <leader>ev :e $MYVIMRC<CR>
-nmap <silent> <leader>sv :so $MYVIMRC<CR>
+                                                                                " Copy to clipboard
+vnoremap  <leader>y  "+y
+nnoremap  <leader>Y  "+yg_
+nnoremap  <leader>y  "+y
+nnoremap  <leader>yy  "+yy
+                                                                                " Paste from clipboard
+nnoremap <leader>p "+p
+nnoremap <leader>P "+P
+vnoremap <leader>p "+p
+vnoremap <leader>P "+P
+                                                                                " save and quit for multiple buffers
+nnoremap <silent> <leader>W :wall<CR>
+nnoremap <silent> <leader>Q :confirm qall<CR>
+nnoremap <silent> ZX :confirm xall<CR>
                                                                                 " !lines! ====
                                                                                 " &blank line& {{{
                                                                                 " add blank line above and below
@@ -744,6 +884,8 @@ vnoremap <silent> <localleader>d "zy`>"zp
 nnoremap <silent> <localleader>d :<C-u>execute 'normal! "zyy' . v:count1 . '"zp'<CR>
                                                                                 "
                                                                                 " !tabs! ====
+                                                                                " open help page in a new tab
+cnoreabbrev <expr> h getcmdtype() == ":" && getcmdline() == 'h' ? 'tab help' : 'h'
                                                                                 " tab navigation
 nnoremap <silent> <leader>1 :tabnext 1<CR>
 nnoremap <silent> <leader>2 :tabnext 2<CR>
@@ -752,11 +894,13 @@ nnoremap <silent> <leader>4 :tabnext 4<CR>
 nnoremap <silent> <leader>5 :tabnext 5<CR>
 nnoremap <silent> <leader>9 :tablast<CR>
                                                                                 " tab management
-nnoremap <silent> <leader>+ :tabnew<CR>:edit .<CR>
+nnoremap <silent> <leader>+ :tabnew<CR>
 nnoremap <silent> <leader>) :tabonly<CR>
 nnoremap <silent> <leader>- :tabclose<CR>
-                                                                                " close all buffers but this one
-nnoremap <silent> <leader>q :%bd\|e#<CR>
+                                                                                " open terminal in a new tab
+nnoremap <silent> <leader>t :tabnew +terminal<CR>
+                                                                                " open terminal in a right split 
+nnoremap <silent> <leader>r :80 vne +terminal<CR>
                                                                                 "
                                                                                 " !panes! ====
                                                                                 " open a new vertical split and switch over to it
@@ -765,9 +909,15 @@ nnoremap <leader>w <C-w>v<C-w>l
 nnoremap <leader>h <C-w>s<C-w>j
                                                                                 "
                                                                                 " !search! ====
+                                                                                " replace the word under cursor
+nnoremap <leader>* :%s/\<<c-r><c-w>\>//g<left><left>
                                                                                 " Toggle search highlighting
 nnoremap <silent> <leader>n :set hlsearch!<cr>
                                                                                 "
+                                                                                " &Quickfix and Location list& {{{
+nmap <silent> <leader>l :call ToggleList("Location List", 'l')<CR>
+nmap <silent> <leader>q :call ToggleList("Quickfix List", 'c')<CR>
+                                                                                " }}}
                                                                                 " @FzF@ {{{
                                                                                 " toggle FZF in current directory
 nnoremap <silent> <leader>o :FZF<CR>
@@ -778,17 +928,16 @@ nnoremap <silent> <leader>` :FZF ~<CR>
                                                                                 " }}}
                                                                                 " @mergetool@ {{{
 nmap <leader>mt <plug>(MergetoolToggle)
+nnoremap <silent> <leader>mb :call mergetool#toggle_layout('LmR')<CR>
                                                                                 " }}}
                                                                                 " @Commentary@ {{{
                                                                                 " comment line and move 1 line down
 nmap <silent> <leader>c <Plug>CommentaryLine :normal j<CR>
 xmap <leader>c <Plug>Commentary
                                                                                 " }}}
-                                                                                " @neoterm@ {{{
-                                                                                " clear neoterm
-nnoremap <leader>tl :<c-u>exec v:count.'Tclear'<cr>
+                                                                                " @gitgutter@ {{{
+nmap <leader>hh :GitGutterToggle<CR>
                                                                                 " }}}
-
 
 " {{ Indent }}
 set tabstop=2                                                                   " a tab is four spaces
@@ -822,12 +971,15 @@ endif
 if !isdirectory(expand(&directory))
   call mkdir(expand(&directory), "p")
 endif
+if !isdirectory(expand(vsnip_snippet_dir))
+  call mkdir(expand(vsnip_snippet_dir), "p")
+endif
 set history=1000                                                                " increase the undo limit
-set updatetime=300                                                              " shorten updatetime
+set updatetime=300                                                              " shorten update time
 set synmaxcol=200                                                               " don't try to highlight lines longer than N characters
 setlocal spell spelllang=en_us                                                  " check spell
-set completeopt=menu,preview,noinsert                                           " do not insert first sugggestion
-                                                                                " tweak autocompletion behavior for <C-n>/<C-p> in insert mode
+set completeopt=menu,preview,noinsert                                           " do not insert first suggestion
+                                                                                " tweak auto completion behavior for <C-n>/<C-p> in insert mode
                                                                                 " default is ".,w,b,u,t,i" without "i", where:
                                                                                 " . - scan current buffer. Same to invoking <C-x><C-n> individually
                                                                                 " w - buffers in other windows
@@ -838,6 +990,9 @@ set completeopt=menu,preview,noinsert                                           
                                                                                 " kspell, when spell check is active, use words from spellfiles
 set complete-=i
 set complete+=kspell
+set splitright                                                                  " open vertical splits to the right
+set makeprg=g++\ -o\ bin_index\ *.cpp                                           " set up 'make' program
+set autowriteall                                                                " write the contents of the file, if it has been modified 
                                                                                 " choose grep backend, use ripgrep if available
 if executable("rg")
   set grepprg=rg\ --vimgrep\ --no-heading\ --smart-case\ --hidden\ --follow
@@ -880,6 +1035,9 @@ hi! link Search IncSearch                                                       
                                                                                 " @lsp@ {{{
 highlight link LspHintText Statement                                            " change lsp hint highlight
                                                                                 " }}}
+                                                                                " @gitgutter@ {{{
+set statusline+=%{GitStatus()}
+                                                                                " }}}
 
 " {{ Formatting }}
 set nowrap                                                                      " don't wrap lines
@@ -913,3 +1071,4 @@ set wrapscan                                                                    
 set incsearch                                                                   " incremental search that shows partial matches
 set smartcase                                                                   " automatically switch search to case-sensitive when search query contains an uppercase letter
 set gdefault                                                                    " apply substitutions globally on lines
+set inccommand=split                                                            " shows the effects of a command incrementally in a preview window
