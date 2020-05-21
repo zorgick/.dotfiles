@@ -16,6 +16,10 @@ filetype plugin indent on                                                       
 set confirm                                                                     " ask before unsafe actions
 set exrc                                                                        " search for .vimrc in current directory
 set secure                                                                      " prevent unsafe operations from project .vimrc
+
+set diffopt=vertical,filler,context:2,indent-heuristic,algorithm:patience,internal
+
+
                                                                                 " load the version of matchit.vim that ships with Vim
 packadd! matchit
                                                                                 " key bindings - How to map Alt key?
@@ -56,7 +60,6 @@ call plug#begin('~/.config/nvim/bundle')
                                                                                 " GIT
 Plug 'tpope/vim-fugitive'
 Plug 'junegunn/gv.vim'
-Plug 'airblade/vim-gitgutter'
 Plug 'samoshkin/vim-mergetool'
                                                                                 " Formatting
 Plug 'jiangmiao/auto-pairs'
@@ -87,10 +90,10 @@ Plug 'vim-airline/vim-airline-themes'
                                                                                 " Intellisense
 Plug 'prabirshrestha/asyncomplete.vim'
 Plug 'prabirshrestha/asyncomplete-lsp.vim'
-Plug 'SirVer/ultisnips'
-Plug 'honza/vim-snippets'
-" Plug 'hrsh7th/vim-vsnip'
-" Plug 'hrsh7th/vim-vsnip-integ'
+" Plug 'SirVer/ultisnips'
+" Plug 'honza/vim-snippets'
+Plug 'hrsh7th/vim-vsnip'
+Plug 'hrsh7th/vim-vsnip-integ'
                                                                                 " pluntuml
 Plug 'aklt/plantuml-syntax'
 Plug 'tyru/open-browser.vim'
@@ -210,11 +213,6 @@ let g:vsnip_snippet_dir = '~/.config/nvim/snippets/'                            
 let test#strategy = 'neovim'
 let test#neovim#term_position = "vert 80"
                                                                                 " }}}
-                                                                                " @gitgutter@ {{{
-let g:gitgutter_git_executable = '/usr/local/bin/git'
-let g:gitgutter_grep = 'rg'
-let g:gitgutter_enabled = 0
-                                                                                " }}}
                                                                                 " @vimtex@ {{{
 let g:vimtex_compiler_progname = 'nvr'
 let g:tex_flavor = 'latex'
@@ -266,6 +264,26 @@ function! s:MoveBlockUp() range
   execute a:firstline "," a:lastline "move '<-2"
   normal! gv=gv
 endfunction
+                                                                                " delete inactive buffers in a current tab
+function! DeleteInactiveBufs()
+                                                                                " from tabpagebuflist() help, get a list of all buffers in all tabs
+    let tablist = []
+    for i in range(tabpagenr('$'))
+        call extend(tablist, tabpagebuflist(i + 1))
+    endfor
+                                                                                " below originally inspired by Hara Krishna Dara and Keith Roberts
+                                                                                " http://tech.groups.yahoo.com/group/vim/message/56425
+    let nWipeouts = 0
+    for i in range(1, bufnr('$'))
+        if bufexists(i) && !getbufvar(i,"&mod") && index(tablist, i) == -1
+                                                                                " bufno exists AND isn't modified AND isn't in the list of buffers open in windows and tabs
+            silent exec 'bwipeout' i
+            let nWipeouts = nWipeouts + 1
+        endif
+    endfor
+    echomsg nWipeouts . ' buffer(s) wiped out'
+endfunction
+command! Bdi :call DeleteInactiveBufs()
                                                                                 " }}}
                                                                                 " &blank line& {{{
                                                                                 " insert blank line below and above without changing cursor
@@ -295,7 +313,6 @@ function s:split_line()
   let @/ = _s
                                                                                 " restore cursor position
   normal! `w
-  startinsert
 endfunction
                                                                                 " }}}
                                                                                 " &search highlight& {{{
@@ -684,14 +701,10 @@ function s:on_mergetool_set_layout(split)
 endfunction
 let g:MergetoolSetLayoutCallback = function('s:on_mergetool_set_layout')
                                                                                 " }}}
-                                                                                " @gitgutter@ {{{
-                                                                                " get a list of counts of added, modified, and removed lines in the current buffer
-function! GitStatus()
-  let [a,m,r] = GitGutterGetHunkSummary()
-  return printf('+%d ~%d -%d', a, m, r)
-endfunction
-                                                                                " }}}
+                                                                                " @autopairs@ {{{
 au Filetype markdown,tex let b:autopairs_enabled = 0
+                                                                                " }}}
+
 
 " {{ Maps-Remaps }}
                                                                                 " remap command mode invocation
@@ -910,7 +923,7 @@ nnoremap <leader>h <C-w>s<C-w>j
                                                                                 "
                                                                                 " !search! ====
                                                                                 " replace the word under cursor
-nnoremap <leader>* :%s/\<<c-r><c-w>\>//g<left><left>
+nnoremap <leader>* :%s/<c-r><c-w>//g<left><left>
                                                                                 " Toggle search highlighting
 nnoremap <silent> <leader>n :set hlsearch!<cr>
                                                                                 "
@@ -935,9 +948,7 @@ nnoremap <silent> <leader>mb :call mergetool#toggle_layout('LmR')<CR>
 nmap <silent> <leader>c <Plug>CommentaryLine :normal j<CR>
 xmap <leader>c <Plug>Commentary
                                                                                 " }}}
-                                                                                " @gitgutter@ {{{
-nmap <leader>hh :GitGutterToggle<CR>
-                                                                                " }}}
+
 
 " {{ Indent }}
 set tabstop=2                                                                   " a tab is four spaces
@@ -1007,7 +1018,10 @@ if executable('fd')
 else
   let g:find_files_findprg = printf("find $d %s ! -type d $* -print", s:findprg_compose_ignoredir_args("find", g:search_ignore_dirs))
 endif
-
+                                                                                " @yats@ {{{
+                                                                                " old regexp engine will incur performance issues for yats
+set re=0
+                                                                                " }}}
 
 " {{ Interface }}
 syntax on                                                                       " enable highlighting
@@ -1034,9 +1048,6 @@ set display=lastline                                                            
 hi! link Search IncSearch                                                       " highlight both search and incremental search identically
                                                                                 " @lsp@ {{{
 highlight link LspHintText Statement                                            " change lsp hint highlight
-                                                                                " }}}
-                                                                                " @gitgutter@ {{{
-set statusline+=%{GitStatus()}
                                                                                 " }}}
 
 " {{ Formatting }}
