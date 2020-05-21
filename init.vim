@@ -16,10 +16,6 @@ filetype plugin indent on                                                       
 set confirm                                                                     " ask before unsafe actions
 set exrc                                                                        " search for .vimrc in current directory
 set secure                                                                      " prevent unsafe operations from project .vimrc
-
-set diffopt=vertical,filler,context:2,indent-heuristic,algorithm:patience,internal
-
-
                                                                                 " load the version of matchit.vim that ships with Vim
 packadd! matchit
                                                                                 " key bindings - How to map Alt key?
@@ -123,6 +119,13 @@ let g:search_ignore_dirs = [
   \] 
 if has('nvim')
   let $GIT_EDITOR = 'nvr -cc split --remote-wait'                               " prevent nested nvim inside :terminal when using git
+endif
+                                                                                " }}}
+                                                                                " &difftool& {{{
+                                                                                " detect if vim is started as a diff tool (vim -d, vimdiff)
+                                                                                " NOTE: Does not work when you start Vim as usual and enter diff mode using :diffthis
+if &diff
+  let g:is_started_as_vim_diff = 1
 endif
                                                                                 " }}}
                                                                                 " &Quickfix and Location list& {{{
@@ -254,6 +257,58 @@ augroup term_setup
   autocmd TermOpen * startinsert
 augroup END
 autocmd FileType gitcommit,gitrebase,gitconfig set bufhidden=delete             " use :wq to save and kill buffer for git
+                                                                                " &difftool& {{{
+augroup aug_diffs
+  au!
+                                                                                " inspect whether some windows are in diff mode, and apply changes for such windows
+                                                                                " run asynchronously, to ensure '&diff' option is properly set by vim
+  au WinEnter,BufEnter * call timer_start(50, 'CheckDiffMode')
+augroup END
+                                                                                " get list of all windows running in diff mode
+function s:GetDiffWindows()
+ return filter(range(1, winnr('$')), { idx, val -> getwinvar(val, '&diff') })
+endfunction
+                                                                                " in diff mode:
+                                                                                " - disable syntax highlighting
+                                                                                " - disable spell checking
+function CheckDiffMode(timer)
+  let curwin = winnr()
+                                                                                " check each window
+  for _win in range(1, winnr('$'))
+    exe "noautocmd " . _win . "wincmd w"
+    call s:change_option_in_diffmode('b:', 'syntax', 'off')
+    call s:change_option_in_diffmode('w:', 'spell', 0, 1)
+  endfor
+                                                                                " get back to original window
+  exe "noautocmd " . curwin . "wincmd w"
+endfunction
+                                                                                " detect window or buffer local option is in sync with diff mode
+function s:change_option_in_diffmode(scope, option, value, ...)
+  let isBoolean = get(a:, "1", 0)
+  let backupVarname = a:scope . "_old_" . a:option
+                                                                                " entering diff mode
+  if &diff && !exists(backupVarname)
+    exe "let " . backupVarname . "=&" . a:option
+    call s:set_option(a:option, a:value, 1, isBoolean)
+  endif
+                                                                                " exiting diff mode
+  if !&diff && exists(backupVarname)
+    let oldValue = eval(backupVarname)
+    call s:set_option(a:option, oldValue, 1, isBoolean)
+    exe "unlet " . backupVarname
+  endif
+endfunction 
+                                                                                " set option using set or setlocal, be it string or boolean value
+function s:set_option(option, value, ...)
+  let isLocal = get(a:, "1", 0)
+  let isBoolean = get(a:, "2", 0)
+  if isBoolean
+    exe (isLocal ? "setlocal " : "set ") . (a:value ? "" : "no") . a:option
+  else
+    exe (isLocal ? "setlocal " : "set ") . a:option . "=" . a:value
+  endif
+endfunction
+                                                                                " }}}
                                                                                 " &move lines up/down& {{{
 function! s:MoveBlockDown() range
   execute a:firstline "," a:lastline "move '>+1"
@@ -1046,6 +1101,9 @@ set cmdheight=2                                                                 
 set signcolumn=yes                                                              " always show sign column to prevent text shiftingG80
 set display=lastline                                                            " add @@@ marks on the last column of last line if there is more text below
 hi! link Search IncSearch                                                       " highlight both search and incremental search identically
+                                                                                " &difftool& {{{
+set diffopt=vertical,filler,context:2,indent-heuristic,algorithm:patience,internal
+                                                                                " }}}
                                                                                 " @lsp@ {{{
 highlight link LspHintText Statement                                            " change lsp hint highlight
                                                                                 " }}}
