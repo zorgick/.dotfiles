@@ -915,6 +915,10 @@ nmap <expr> <C-Left> &diff? '<Plug>(MergetoolDiffExchangeLeft)' : '<C-Left>'
 nmap <expr> <C-Right> &diff? '<Plug>(MergetoolDiffExchangeRight)' : '<C-Right>'
 nmap <expr> <C-Down> &diff? '<Plug>(MergetoolDiffExchangeDown)' : '<C-Down>'
 nmap <expr> <C-Up> &diff? '<Plug>(MergetoolDiffExchangeUp)' : '<C-Up>'
+vnoremap <expr> <C-Left> &diff? '<Plug>(MergetoolDiffExchangeLeft)' : '<C-Left>'
+vnoremap <expr> <C-Right> &diff? '<Plug>(MergetoolDiffExchangeRight)' : '<C-Right>'
+vnoremap <expr> <C-Down> &diff? '<Plug>(MergetoolDiffExchangeDown)' : '<C-Down>'
+vnoremap <expr> <C-Up> &diff? '<Plug>(MergetoolDiffExchangeUp)' : '<C-Up>'
                                                                                 " move through diffs. [c and ]c are native Vim mappings
 nnoremap <expr> <Up> &diff ? '[czz' : ''
 nnoremap <expr> <Down> &diff ? ']czz' : ''
@@ -1002,6 +1006,36 @@ nnoremap <silent> <leader>mb :call mergetool#toggle_layout('LmR')<CR>
                                                                                 " comment line and move 1 line down
 nmap <silent> <leader>c <Plug>CommentaryLine :normal j<CR>
 xmap <leader>c <Plug>Commentary
+                                                                                " }}}
+                                                                                " @fugitive@ {{{
+                                                                                " view git index window
+nnoremap <silent> <leader>gs :Gstatus<CR>
+                                                                                " return to working tree version from blob, blame, log
+nnoremap <silent> <leader>ge :Gedit<CR>
+                                                                                " undo changes in working tree
+nnoremap <silent> <leader>gu :Gread<CR>
+xnoremap <silent> <leader>gu :Gread<CR>
+                                                                                " commit changes
+nnoremap <silent> <leader>gca :Gcommit --verbose<CR>
+nnoremap <silent> <leader>gcf :Gcommit --amend --reuse-message HEAD<CR>
+                                                                                " diff working tree vs index vs HEAD
+nnoremap <silent> <leader>gdw :Gdiff<CR>
+nnoremap <silent> <leader>gdh :Gdiff HEAD<CR>
+nnoremap <silent> <leader>gdi :Gdiff --cached HEAD<CR>
+                                                                                " gla, gva, list (a)ll commits
+nnoremap <silent> <leader>gla :Commits<CR>
+nnoremap <silent> <leader>gva :GV<CR>
+                                                                                " glf, gvf, list commits touching current (f)ile
+nnoremap <silent> <leader>glf :BCommits<CR>
+nnoremap <silent> <leader>gvf :GV!<CR>
+xnoremap <silent> <leader>gvf :GV<CR>
+                                                                                " gls, gvs, list commits touching current file, but show file revisions or (s)napshots (populates quickfix list)
+nnoremap <silent> <leader>gls :silent! Glog<CR><C-l>
+nnoremap <silent> <leader>gvs :GV?<CR>
+                                                                                " glF, list commits touching current file, show full commit objects (using vim-fugitive)
+nnoremap <silent> <leader>glF :silent! Glog -- %<CR><C-l>
+                                                                                " change branch
+nnoremap <silent> <leader>gco :Git checkout<Space>
                                                                                 " }}}
 
 
@@ -1103,6 +1137,9 @@ set display=lastline                                                            
 hi! link Search IncSearch                                                       " highlight both search and incremental search identically
                                                                                 " &difftool& {{{
 set diffopt=vertical,filler,context:2,indent-heuristic,algorithm:patience,internal
+hi! DiffText term=NONE ctermfg=105 ctermbg=231 cterm=NONE guifg=#8787ff guibg=#ffffff gui=NONE
+hi! link DiffChange NONE
+hi! clear DiffChange
                                                                                 " }}}
                                                                                 " @lsp@ {{{
 highlight link LspHintText Statement                                            " change lsp hint highlight
