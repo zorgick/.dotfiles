@@ -100,6 +100,8 @@ Plug 'critiqjo/lldb.nvim'
 Plug 'janko/vim-test'
                                                                                 " latex
 Plug 'lervag/vimtex'
+Plug 'neomake/neomake'
+Plug 'w0rp/ale', { 'for':  ['tex'] }  
                                                                                 " terminal
 Plug 'caenrique/nvim-toggle-terminal'
 call plug#end()
@@ -221,6 +223,9 @@ let g:vimtex_compiler_progname = 'nvr'
 let g:tex_flavor = 'latex'
 let g:vimtex_view_method = 'skim'
 let g:vimtex_quickfix_mode = 0
+let g:vimtex_compiler_latexmk = {
+    \ 'build_dir' : '../dist',
+\}
                                                                                 " }}}
                                                                                 " @ultisnips@ {{{
 let g:UltiSnipsJumpForwardTrigger="<c-n>"
@@ -570,6 +575,34 @@ function! s:get_selected_text()
     let @z = regb
   endtry
 endfunction
+                                                                                " Escape special characters in a string for exact matching.
+                                                                                " This is useful to copying strings from the file to the search tool
+function! EscapeString (string)
+  let string=a:string
+                                                                                " Escape regex characters
+  let string = escape(string, '^$.*\/~[]')
+                                                                                " Escape the line endings
+  let string = substitute(string, '\n', '\\n', 'g')
+  return string
+endfunction
+                                                                                " Get the current visual block for search and replaces
+                                                                                " This function passed the visual block through a string escape function
+function! GetVisual() range
+                                                                                " Save the current register and clipboard
+  let reg_sav = getreg('"')
+  let regtype_save = getregtype('"')
+  let cb_save = &clipboard
+  set clipboard&
+                                                                                " Put the current visual selection in the " register
+  normal! ""gvy
+  let selection = getreg('"')
+                                                                                " Put the saved registers and clipboards back
+  call setreg('"', reg_save, regtype_save)
+  let &clipboard = cb_save
+                                                                                "Escape any special characters in the selection
+  let escaped_selection = EscapeString(selection)
+  return escaped_selection
+endfunction
                                                                                 " }}}
                                                                                 " &find files& {{{
 function s:findprg_compose_ignoredir_args(backend, ignore_dirs)
@@ -720,6 +753,7 @@ function! s:on_lsp_buffer_enabled() abort
     nmap <buffer> gi <plug>(lsp-implementation)
     nmap <buffer> gt <plug>(lsp-peek-type-definition)
     nmap <buffer> gr <plug>(lsp-references)
+    nmap <buffer> gh <plug>(lsp-hover)
     nmap <buffer> <F2> <plug>(lsp-rename)
 endfunction
 "
@@ -982,7 +1016,9 @@ nnoremap <leader>h <C-w>s<C-w>j
                                                                                 "
                                                                                 " !search! ====
                                                                                 " replace the word under cursor
-nnoremap <leader>* :%s/<c-r><c-w>//g<left><left>
+nnoremap <leader>z :%s/<c-r><c-w>//<left>
+                                                                                " Search for selection and replace it across the entire file
+vmap <leader>z <Esc>:%s/<c-r>=GetVisual()<cr>
                                                                                 " Toggle search highlighting
 nnoremap <silent> <leader>n :set hlsearch!<cr>
                                                                                 "
@@ -1077,7 +1113,7 @@ endif
 set history=1000                                                                " increase the undo limit
 set updatetime=300                                                              " shorten update time
 set synmaxcol=200                                                               " don't try to highlight lines longer than N characters
-setlocal spell spelllang=en_us                                                  " check spell
+setlocal spell spelllang=en_us,ru_ru                                            " check spell
 set completeopt=menu,preview,noinsert                                           " do not insert first suggestion
                                                                                 " tweak auto completion behavior for <C-n>/<C-p> in insert mode
                                                                                 " default is ".,w,b,u,t,i" without "i", where:
@@ -1091,7 +1127,7 @@ set completeopt=menu,preview,noinsert                                           
 set complete-=i
 set complete+=kspell
 set splitright                                                                  " open vertical splits to the right
-set makeprg=g++\ -o\ bin_index\ *.cpp                                           " set up 'make' program
+au FileType cpp set makeprg=g++\ -std=c++11\ -o\ bin_index\ *.cpp               " set up 'make' program for c++
 set autowriteall                                                                " write the contents of the file, if it has been modified 
                                                                                 " choose grep backend, use ripgrep if available
 if executable("rg")
