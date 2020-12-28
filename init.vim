@@ -117,7 +117,8 @@ let g:search_ignore_dirs = [
   \ '.git',
   \ 'node_modules',
   \ 'coverage',
-  \ 'package-lock.json'
+  \ 'package-lock.json',
+  \ 'yarn.lock'
   \] 
 if has('nvim')
   let $GIT_EDITOR = 'nvr -cc split --remote-wait'                               " prevent nested nvim inside :terminal when using git
@@ -262,6 +263,22 @@ augroup term_setup
   autocmd TermOpen * startinsert
 augroup END
 autocmd FileType gitcommit,gitrebase,gitconfig set bufhidden=delete             " use :wq to save and kill buffer for git
+                                                                                " redirect the output of a Vim or external command into a scratch buffer
+function! Redir(cmd)
+  if a:cmd =~ '^!'
+    execute "let output = system('" . substitute(a:cmd, '^!', '', '') . "')"
+  else
+    redir => output
+    execute a:cmd
+    redir END
+  endif
+  tabnew
+  setlocal nobuflisted buftype=nofile bufhidden=wipe noswapfile
+  call setline(1, split(output, "\n"))
+  put! = a:cmd
+  put = '----'
+endfunction
+command! -nargs=1 Redir silent call Redir(<f-args>)
                                                                                 " &difftool& {{{
 augroup aug_diffs
   au!
@@ -544,7 +561,6 @@ function s:prepare_search_command(context, backend)
   let text = empty(text) ? text : '"' . text . '"'
                                                                                 " grep/ripgrep/ctrlsf args
                                                                                 " always search literally, without regexp
-                                                                                " use word boundaries when context is 'word'
   let args = [a:backend ==# 'GrepSF' ? '-L' : '-F']
   if a:context ==# 'word'
     call add(args, a:backend ==# 'GrepSF' ? '-W' : '-w')
@@ -552,7 +568,7 @@ function s:prepare_search_command(context, backend)
                                                                                 " compose ":GrepXX" command to put on a command line
   let search_command = ":\<C-u>" . a:backend
   let search_command .= empty(args) ? ' ' : ' ' . join(args, ' ') . ' '
-  let search_command .= '-- ' . text
+  let search_command .= a:backend ==# 'Ggrep' ?  a:context !=# '' ? text . ' dev .' : text : '-- '  . text
                                                                                 " put actual command in a command line, but do not execute
                                                                                 " user would initiate a search manually with <CR>
   call feedkeys(search_command, 'n')
@@ -732,6 +748,20 @@ endfunction
                                                                                 " use preview when FzfFiles runs in fullscreen
 command! -nargs=? -bang -complete=dir FzfFiles
       \ call fzf#vim#files(<q-args>, <bang>0 ? fzf#vim#with_preview('up:60%') : {}, <bang>0)
+function! s:list_buffers()
+  redir => list
+  silent ls
+  redir END
+  return split(list, "\n")
+endfunction
+function! s:delete_buffers(lines)
+  execute 'bwipeout' join(map(a:lines, {_, line -> split(line)[0]}))
+endfunction
+command! BD call fzf#run(fzf#wrap({
+  \ 'source': s:list_buffers(),
+  \ 'sink*': { lines -> s:delete_buffers(lines) },
+  \ 'options': '--multi --reverse --bind ctrl-a:select-all+accept'
+\ }))
                                                                                 " }}}
                                                                                 " @Commentary@ {{{
 autocmd FileType javascript.jsx setlocal commentstring={/*\ %s\ */}
@@ -754,6 +784,8 @@ function! s:on_lsp_buffer_enabled() abort
     nmap <buffer> gt <plug>(lsp-peek-type-definition)
     nmap <buffer> gr <plug>(lsp-references)
     nmap <buffer> gh <plug>(lsp-hover)
+    nmap <buffer> ]e <plug>(lsp-next-error)
+    nmap <buffer> [e <plug>(lsp-previous-error)
     nmap <buffer> <F2> <plug>(lsp-rename)
 endfunction
 "
@@ -880,17 +912,23 @@ vnoremap # :<C-u>call <SID>search_from_context("?", "selection")<CR>
                                                                                 " }}}
                                                                                 " &project wide search& {{{
                                                                                 " :grep + grepprg + quickfix list
-nnoremap <F7><F7> :call <SID>prepare_search_command("", "Grep")<CR>
-nnoremap <F7>w :call <SID>prepare_search_command("word", "Grep")<CR>
-nnoremap <F7>s :call <SID>prepare_search_command("selection", "Grep")<CR>
-nnoremap <F7>/ :call <SID>prepare_search_command("search", "Grep")<CR>
-vnoremap <silent> <F7> :call <SID>prepare_search_command("selection", "Grep")<CR>
+nnoremap `` :call <SID>prepare_search_command("", "Grep")<CR>
+nnoremap `w :call <SID>prepare_search_command("word", "Grep")<CR>
+nnoremap `s :call <SID>prepare_search_command("selection", "Grep")<CR>
+nnoremap `/ :call <SID>prepare_search_command("search", "Grep")<CR>
+vnoremap <silent> ` :call <SID>prepare_search_command("selection", "Grep")<CR>
+
+nnoremap \\ :call <SID>prepare_search_command("", "Ggrep")<CR>
+nnoremap \w :call <SID>prepare_search_command("word", "Ggrep")<CR>
+nnoremap \s :call <SID>prepare_search_command("selection", "Ggrep")<CR>
+nnoremap \/ :call <SID>prepare_search_command("search", "Ggrep")<CR>
+vnoremap \ :call <SID>prepare_search_command("selection", "Ggrep")<CR>
                                                                                 " ctrlsf.vim (uses ack, ag or rg under the hood)
-nnoremap <F8><F8> :call <SID>prepare_search_command("", "GrepSF")<CR>
-nnoremap <F8>w :call <SID>prepare_search_command("word", "GrepSF")<CR>
-nnoremap <F8>s :call <SID>prepare_search_command("selection", "GrepSF")<CR>
-nnoremap <F8>/ :call <SID>prepare_search_command("search", "GrepSF")<CR>
-vnoremap <silent> <F8> :call <SID>prepare_search_command("selection", "GrepSF")<CR>
+nnoremap -- :call <SID>prepare_search_command("", "GrepSF")<CR>
+nnoremap -w :call <SID>prepare_search_command("word", "GrepSF")<CR>
+nnoremap -s :call <SID>prepare_search_command("selection", "GrepSF")<CR>
+nnoremap -/ :call <SID>prepare_search_command("search", "GrepSF")<CR>
+vnoremap <silent> - :call <SID>prepare_search_command("selection", "GrepSF")<CR>
                                                                                 " }}}
                                                                                 "
                                                                                 " !navigation! ====
@@ -964,6 +1002,10 @@ nnoremap <expr> <Down> &diff ? ']czz' : ''
 nnoremap <Space> <Nop>
 let mapleader=" "
 let maplocalleader=","
+                                                                                " delete without copying
+nnoremap <leader>d "_d
+xnoremap <leader>d "_d
+vnoremap <leader>d "_d
                                                                                 " quickly edit/reload the vimrc file
 nmap <silent> <leader>ev :e $MYVIMRC<CR>
                                                                                 " Copy to clipboard
@@ -1027,6 +1069,8 @@ nmap <silent> <leader>l :call ToggleList("Location List", 'l')<CR>
 nmap <silent> <leader>q :call ToggleList("Quickfix List", 'c')<CR>
                                                                                 " }}}
                                                                                 " @FzF@ {{{
+                                                                                " toggle FZF for active buffers 
+nnoremap <silent> <leader>b :Buff<CR>
                                                                                 " toggle FZF in current directory
 nnoremap <silent> <leader>o :FZF<CR>
                                                                                 " toggle FZF in current directory (full screen mode)
@@ -1072,6 +1116,8 @@ nnoremap <silent> <leader>gvs :GV?<CR>
 nnoremap <silent> <leader>glF :silent! Glog -- %<CR><C-l>
                                                                                 " change branch
 nnoremap <silent> <leader>gco :Git checkout<Space>
+                                                                                " blame file
+nnoremap <silent> <leader>gbl :Gblame<CR>
                                                                                 " }}}
 
 
@@ -1113,7 +1159,7 @@ endif
 set history=1000                                                                " increase the undo limit
 set updatetime=300                                                              " shorten update time
 set synmaxcol=200                                                               " don't try to highlight lines longer than N characters
-setlocal spell spelllang=en_us,ru_ru                                            " check spell
+setlocal spelllang=en_us,ru_ru                                                  " check spell
 set completeopt=menu,preview,noinsert                                           " do not insert first suggestion
                                                                                 " tweak auto completion behavior for <C-n>/<C-p> in insert mode
                                                                                 " default is ".,w,b,u,t,i" without "i", where:
