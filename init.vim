@@ -10,6 +10,10 @@
 " on Mac: preferences > keyboard > modifier keys
 " on Windows: 
 " use :checkhealth to monitor any problems with neovim
+" DO NOT FORGET:
+" 1. install latest python via brew
+" 2. install latest pip via brew
+" 3. install pynvim and neovim via latest pip
 " {{ General }}
 set nocompatible                                                                " use vim settings rather than vi settings
 filetype plugin indent on                                                       " turn on detection, plugin and indent at once
@@ -110,7 +114,7 @@ call plug#end()
 " {{ Variables }}
                                                                                 " &custom variables& {{{
 let g:python_host_prog = '/usr/bin/python'                                      " command to start Python 2
-let g:python3_host_prog = '/usr/local/opt/python@3.8/bin/python3'               " command to start Python 3
+let g:python3_host_prog = $PYTHON_3                                             " command to start Python 3
 let _resize_factor = 1.2                                                        " resize step
                                                                                 " ignore directories
 let g:search_ignore_dirs = [
